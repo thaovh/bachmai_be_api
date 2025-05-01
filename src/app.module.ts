@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import configuration from './config/configuration';
 import { CommonModule } from './common/common.module';
+import { DynamicQueryModule } from './dynamic-query/dynamic-query.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { CommonModule } from './common/common.module';
     AuthModule,
     UsersModule,
     CommonModule,
+    DynamicQueryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
