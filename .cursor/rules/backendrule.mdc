@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# .cursorrules
+# Quy tắc cho dự án backend NestJS với PostgreSQL, CQRS, xóa mềm, JWT, refresh token, Swagger, log đầy đủ, lỗi từ tệp khai báo, phân trang, rate limiting, và hỏi lại bằng tiếng Việt nếu yêu cầu không rõ
+
+# 1. Cấu trúc dự án
+- Use NestJS as the backend framework
+- Follow NestJS modular architecture (modules, controllers, services, entities)
+- Organize code into feature-based modules (e.g., users, products, auth)
+- Apply CQRS pattern for all modules (separate commands and queries)
+- Use TypeScript for all code
+
+# 2. Cơ sở dữ liệu
+- Use PostgreSQL as the database
+- Use TypeORM as the ORM
+- All entities must:
+  - Use UUID v4 for primary key (id)
+  - Include createdAt (timestamp), updatedAt (timestamp), createdBy (string), updatedBy (string) from base entity
+  - Implement soft delete (deletedAt: timestamp | null)
+  - Generate migrations for all schema changes
+  - Use naming convention: snake_case for database columns
+  - Create a refresh_token table to store refresh tokens:
+  - Columns: id (UUID), user_id (UUID), token (string), expires_at (timestamp), created_at (timestamp)
+  - Load database configuration from DATABASE in .env
+
+# 3. CQRS
+- Implement CQRS pattern using NestJS CQRS module
+- Separate commands (e.g., CreateUserCommand, UpdateUserCommand) and queries (e.g., GetUserQuery)
+- Use event sourcing for critical business logic (e.g., store events for auditing)
+- Commands must validate input using class-validator
+- Queries must return DTOs (Data Transfer Objects)
+
+# 4. API Standards
+- Follow REST API conventions
+- Use HTTP status codes according to RFC 7231:
+  - 200: Success
+  - 201: Resource created
+  - 400: Bad request
+  - 401: Unauthorized
+  - 403: Forbidden
+  - 404: Not found
+  - 429: Too many requests
+  - 500: Server error
+- Return standardized error responses:
+  ```json
+  {
+    "statusCode": 400,
+    "error": "Error name",
+    "message": "Error message",
+    "code": "ERROR_CODE"
+  }
