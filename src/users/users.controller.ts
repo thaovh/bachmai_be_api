@@ -12,6 +12,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from './enums/user-role.enum';
 import { PaginationResponseDto } from '../common/dto/pagination-response.dto';
 import { PaginationMetaDto } from '../common/dto/pagination-meta.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -27,8 +28,9 @@ export class UsersController {
     @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Create a new user' })
     @ApiResponse({ status: 201, description: 'User created successfully' })
-    async create(@Body() createUserDto: CreateUserDto): Promise<User> {
-        return this.commandBus.execute(new CreateUserCommand(createUserDto));
+    async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
+        const user = await this.commandBus.execute(new CreateUserCommand(createUserDto));
+        return this.toUserResponseDto(user);
     }
 
     @Get()
@@ -38,7 +40,7 @@ export class UsersController {
     async findAll(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
-    ): Promise<PaginationResponseDto<User>> {
+    ): Promise<PaginationResponseDto<UserResponseDto>> {
         const [items, total] = await this.queryBus.execute(new GetUsersQuery(page, limit));
         const totalPages = Math.ceil(total / limit);
         const meta: PaginationMetaDto = {
@@ -49,15 +51,16 @@ export class UsersController {
             hasNext: page < totalPages,
             hasPrev: page > 1,
         };
-        return { items, meta };
+        return { items: items.map(this.toUserResponseDto), meta };
     }
 
     @Get(':id')
     @Roles(UserRole.ADMIN, UserRole.USER)
     @ApiOperation({ summary: 'Get a user by id' })
     @ApiResponse({ status: 200, description: 'Return the user' })
-    async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
-        return this.queryBus.execute(new GetUserQuery(id));
+    async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
+        const user = await this.queryBus.execute(new GetUserQuery(id));
+        return this.toUserResponseDto(user);
     }
 
     @Patch(':id')
@@ -69,5 +72,10 @@ export class UsersController {
         @Body() updateUserDto: UpdateUserDto,
     ): Promise<User> {
         return this.commandBus.execute(new UpdateUserCommand(id, updateUserDto));
+    }
+
+    private toUserResponseDto(user: User): UserResponseDto {
+        const { id, email, username, phoneNumber, identityNumber, role, createdAt, updatedAt } = user;
+        return { id, email, username, phoneNumber, identityNumber, role, createdAt, updatedAt };
     }
 } 
