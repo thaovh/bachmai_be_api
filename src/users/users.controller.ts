@@ -10,6 +10,8 @@ import { User } from '../database/entities/user.entity';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from './enums/user-role.enum';
+import { PaginationResponseDto } from '../common/dto/pagination-response.dto';
+import { PaginationMetaDto } from '../common/dto/pagination-meta.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -36,9 +38,18 @@ export class UsersController {
     async findAll(
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
-    ): Promise<{ items: User[]; total: number }> {
+    ): Promise<PaginationResponseDto<User>> {
         const [items, total] = await this.queryBus.execute(new GetUsersQuery(page, limit));
-        return { items, total };
+        const totalPages = Math.ceil(total / limit);
+        const meta: PaginationMetaDto = {
+            page,
+            limit,
+            totalItems: total,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+        };
+        return { items, meta };
     }
 
     @Get(':id')

@@ -12,6 +12,7 @@ import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { LoginHandler } from './handlers/login.handler';
 import { LogoutHandler } from './handlers/logout.handler';
 import { RefreshTokenHandler } from './handlers/refresh-token.handler';
+import { CommonModule } from '../common/common.module';
 
 const commandHandlers = [LoginHandler, LogoutHandler, RefreshTokenHandler];
 
@@ -30,6 +31,7 @@ const commandHandlers = [LoginHandler, LogoutHandler, RefreshTokenHandler];
             }),
             inject: [ConfigService],
         }),
+        CommonModule,
     ],
     controllers: [AuthController],
     providers: [

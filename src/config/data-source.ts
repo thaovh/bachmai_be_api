@@ -10,7 +10,7 @@ export const dataSourceOptions: DataSourceOptions = {
     username: process.env.DATABASE_USERNAME || 'postgres',
     password: process.env.DATABASE_PASSWORD || 'postgres',
     database: process.env.DATABASE_NAME || 'bm_backend',
-    entities: [__dirname + '/../**/*.entity.js'],
+    entities: [__dirname + '/../**/*.entity.ts'],
     migrations: [__dirname + '/../database/migrations/*{.js,.ts}'],
     synchronize: false,
     logging: process.env.NODE_ENV === 'development',

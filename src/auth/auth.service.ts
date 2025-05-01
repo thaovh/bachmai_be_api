@@ -7,6 +7,9 @@ import { User } from '../database/entities/user.entity';
 import { RefreshToken } from '../database/entities/refresh-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { ConfigService } from '@nestjs/config';
+import { ERROR_MESSAGES } from '../common/constants/error-messages';
+import { ERROR_CODES } from '../common/constants/error-codes';
+import { AuditLogService } from '../common/services/audit-log.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +21,7 @@ export class AuthService {
         private refreshTokenRepository: Repository<RefreshToken>,
         private jwtService: JwtService,
         private configService: ConfigService,
+        private readonly auditLogService: AuditLogService,
     ) { }
 
     async validateUser(loginDto: LoginDto): Promise<User> {
@@ -38,16 +42,29 @@ export class AuthService {
 
         if (!user) {
             this.logger.warn(`Login failed: User not found for identifier: ${identifier}`);
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException({
+                message: ERROR_MESSAGES.INVALID_CREDENTIALS,
+                code: ERROR_CODES.INVALID_CREDENTIALS,
+            });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             this.logger.warn(`Login failed: Invalid password for identifier: ${identifier}`);
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException({
+                message: ERROR_MESSAGES.INVALID_CREDENTIALS,
+                code: ERROR_CODES.INVALID_CREDENTIALS,
+            });
         }
 
         this.logger.log(`User validated successfully: ${user.id}`);
+        await this.auditLogService.logAction({
+            userId: user.id,
+            action: 'LOGIN',
+            resource: 'auth',
+            newValue: user,
+            createdBy: user.username,
+        });
         return user;
     }
 
@@ -102,20 +119,35 @@ export class AuthService {
 
             if (!token || !token.user || token.user.id !== payload.sub) {
                 this.logger.warn('Refresh token invalid or user not found');
-                throw new UnauthorizedException('Invalid refresh token');
+                throw new UnauthorizedException({
+                    message: ERROR_MESSAGES.INVALID_CREDENTIALS,
+                    code: ERROR_CODES.INVALID_CREDENTIALS,
+                });
             }
 
             if (new Date() > token.expiresAt) {
                 await this.refreshTokenRepository.remove(token);
                 this.logger.warn('Refresh token expired');
-                throw new UnauthorizedException('Refresh token expired');
+                throw new UnauthorizedException({
+                    message: 'Refresh token expired',
+                    code: ERROR_CODES.UNAUTHORIZED,
+                });
             }
 
             this.logger.log(`Access token refreshed for user: ${token.user.id}`);
+            await this.auditLogService.logAction({
+                userId: token.user.id,
+                action: 'REFRESH_TOKEN',
+                resource: 'auth',
+                createdBy: token.user.username,
+            });
             return this.generateTokens(token.user);
         } catch (error) {
             this.logger.error('Error refreshing access token', error.stack);
-            throw new UnauthorizedException('Invalid refresh token');
+            throw new UnauthorizedException({
+                message: ERROR_MESSAGES.INVALID_CREDENTIALS,
+                code: ERROR_CODES.INVALID_CREDENTIALS,
+            });
         }
     }
 
@@ -123,5 +155,11 @@ export class AuthService {
         this.logger.log(`Logout for user: ${userId}`);
         await this.refreshTokenRepository.delete({ userId, token: refreshToken });
         this.logger.log(`User ${userId} logged out and refresh token deleted`);
+        await this.auditLogService.logAction({
+            userId,
+            action: 'LOGOUT',
+            resource: 'auth',
+            createdBy: userId,
+        });
     }
 } 

@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { GetUserQuery, GetUsersQuery } from '../queries/get-user.query';
 import { User } from '../../database/entities/user.entity';
 import { NotFoundException, Logger } from '@nestjs/common';
+import { ERROR_MESSAGES } from '../../common/constants/error-messages';
+import { ERROR_CODES } from '../../common/constants/error-codes';
+import { AuditLogService } from '../../common/services/audit-log.service';
 
 @QueryHandler(GetUserQuery)
 export class GetUserHandler implements IQueryHandler<GetUserQuery> {
@@ -11,6 +14,7 @@ export class GetUserHandler implements IQueryHandler<GetUserQuery> {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        private readonly auditLogService: AuditLogService,
     ) { }
 
     async execute(query: GetUserQuery): Promise<User> {
@@ -18,9 +22,18 @@ export class GetUserHandler implements IQueryHandler<GetUserQuery> {
         const user = await this.userRepository.findOne({ where: { id: query.id } });
         if (!user) {
             this.logger.warn(`User not found: ${query.id}`);
-            throw new NotFoundException('User not found');
+            throw new NotFoundException({
+                message: ERROR_MESSAGES.USER_NOT_FOUND,
+                code: ERROR_CODES.USER_NOT_FOUND,
+            });
         }
         this.logger.log(`User fetched with id: ${user.id}`);
+        await this.auditLogService.logAction({
+            userId: user.id,
+            action: 'GET_USER',
+            resource: 'user',
+            newValue: user,
+        });
         return user;
     }
 }
