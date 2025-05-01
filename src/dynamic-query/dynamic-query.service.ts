@@ -76,4 +76,84 @@ export class DynamicQueryService {
             }
         }
     }
+
+    async createDynamicQuery(dto: any, userId?: string, ip?: string, userAgent?: string) {
+        const exist = await this.dynamicQueryRepo.findOne({ where: { name: dto.name } });
+        if (exist) throw new BadRequestException('Query name already exists');
+        const entity = this.dynamicQueryRepo.create({
+            ...dto,
+            createdBy: userId,
+            updatedBy: userId,
+        });
+        const saved = await this.dynamicQueryRepo.save(entity);
+        await this.auditLogService.logAction({
+            userId,
+            action: 'create_dynamic_query',
+            resource: dto.name,
+            newValue: dto,
+            ip,
+            userAgent,
+        });
+        return saved;
+    }
+
+    async updateDynamicQuery(id: string, dto: any, userId?: string, ip?: string, userAgent?: string) {
+        const entity = await this.dynamicQueryRepo.findOne({ where: { id } });
+        if (!entity) throw new NotFoundException('Dynamic query not found');
+        Object.assign(entity, dto, { updatedBy: userId });
+        const saved = await this.dynamicQueryRepo.save(entity);
+        await this.auditLogService.logAction({
+            userId,
+            action: 'update_dynamic_query',
+            resource: entity.name,
+            newValue: dto,
+            ip,
+            userAgent,
+        });
+        return saved;
+    }
+
+    async deleteDynamicQuery(id: string, userId?: string, ip?: string, userAgent?: string) {
+        const entity = await this.dynamicQueryRepo.findOne({ where: { id } });
+        if (!entity) throw new NotFoundException('Dynamic query not found');
+        await this.dynamicQueryRepo.softDelete(id);
+        await this.auditLogService.logAction({
+            userId,
+            action: 'delete_dynamic_query',
+            resource: entity.name,
+            oldValue: entity,
+            ip,
+            userAgent,
+        });
+        return { success: true };
+    }
+
+    async getDynamicQueries(page = 1, limit = 20, name?: string) {
+        const qb = this.dynamicQueryRepo.createQueryBuilder('q')
+            .where('q.deletedAt IS NULL');
+        if (name) {
+            qb.andWhere('q.name ILIKE :name', { name: `%${name}%` });
+        }
+        qb.orderBy('q.createdAt', 'DESC')
+            .skip((page - 1) * limit)
+            .take(limit);
+        const [items, totalItems] = await qb.getManyAndCount();
+        return {
+            items,
+            meta: {
+                page,
+                limit,
+                totalItems,
+                totalPages: Math.ceil(totalItems / limit),
+                hasNext: page * limit < totalItems,
+                hasPrev: page > 1,
+            },
+        };
+    }
+
+    async getDynamicQueryDetail(id: string) {
+        const entity = await this.dynamicQueryRepo.findOne({ where: { id } });
+        if (!entity || entity.deletedAt) throw new NotFoundException('Dynamic query not found');
+        return entity;
+    }
 } 
