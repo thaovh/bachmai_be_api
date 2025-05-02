@@ -6,6 +6,8 @@ import { OracleService } from '../common/services/oracle.service';
 import { AuditLogService } from '../common/services/audit-log.service';
 import { CreateDynamicQueryDto } from './dto/create-dynamic-query.dto';
 import { UpdateDynamicQueryDto } from './dto/update-dynamic-query.dto';
+import { PaginationResponseDto } from '../common/dto/pagination-response.dto';
+import { PaginationMetaDto } from '../common/dto/pagination-meta.dto';
 
 @Injectable()
 export class DynamicQueryService {
@@ -16,7 +18,7 @@ export class DynamicQueryService {
         private readonly auditLogService: AuditLogService,
     ) {}
 
-    async getDynamicQueries(page: number = 1, limit: number = 20, name?: string) {
+    async getDynamicQueries(page: number = 1, limit: number = 20, name?: string): Promise<PaginationResponseDto<DynamicQuery>> {
         const [items, total] = await this.dynamicQueryRepository.findAndCount({
             where: name ? { name: Like(`%${name}%`) } : {},
             skip: (page - 1) * limit,
@@ -24,14 +26,17 @@ export class DynamicQueryService {
             order: { createdAt: 'DESC' },
         });
 
-        return {
-            items,
-            pagination: {
-                total,
-                page,
-                limit,
-            },
+        const totalPages = Math.ceil(total / limit);
+        const meta: PaginationMetaDto = {
+            page,
+            limit,
+            totalItems: total,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
         };
+
+        return { items, meta };
     }
 
     async getDynamicQueryDetail(id: string) {
@@ -42,7 +47,7 @@ export class DynamicQueryService {
         return query;
     }
 
-    async runQueryByName(name: string, params: any, page: number = 1, limit: number = 20, userId: string, ip: string, userAgent: string) {
+    async runQueryByName(name: string, params: any, page: number = 1, limit: number = 20, userId: string, ip: string, userAgent: string): Promise<PaginationResponseDto<any>> {
         const query = await this.dynamicQueryRepository.findOne({ where: { name } });
         if (!query) {
             throw new NotFoundException('Dynamic query not found');
@@ -66,8 +71,34 @@ export class DynamicQueryService {
             }
         });
 
+        // Add pagination to SQL query
+        const offset = (page - 1) * limit;
+        const paginatedSql = `
+            WITH paginated_query AS (
+                ${query.sql}
+            )
+            SELECT * FROM (
+                SELECT a.*, COUNT(*) OVER() as total_count
+                FROM paginated_query a
+            ) b
+            OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY
+        `;
+
+        // Add pagination parameters
+        finalParams.offset = offset;
+        finalParams.limit = limit;
+
         // Execute query
-        const result = await this.oracleService.executeQuery(query.sql, finalParams);
+        const result = await this.oracleService.executeQuery(paginatedSql, finalParams);
+
+        // Get total count from first row
+        const total = result.length > 0 ? result[0].TOTAL_COUNT : 0;
+
+        // Remove total_count from result
+        const items = result.map(row => {
+            const { TOTAL_COUNT, ...rest } = row;
+            return rest;
+        });
 
         // Log the execution
         await this.auditLogService.logAction({
@@ -80,14 +111,17 @@ export class DynamicQueryService {
             createdBy: userId,
         });
 
-        return {
-            items: result,
-            pagination: {
-                total: result.length,
-                page,
-                limit,
-            },
+        const totalPages = Math.ceil(total / limit);
+        const meta: PaginationMetaDto = {
+            page,
+            limit,
+            totalItems: total,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
         };
+
+        return { items, meta };
     }
 
     async createDynamicQuery(dto: CreateDynamicQueryDto, userId: string, ip: string, userAgent: string) {
