@@ -35,8 +35,8 @@ export class DynamicQueryController {
         @Req() req: Request,
     ) {
         const userId = (req.user as any)?.userId || (req.user as any)?.id;
-        const ip = req.ip;
-        const userAgent = req.headers['user-agent'];
+        const ip = req.ip || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
         return this.dynamicQueryService.runQueryByName(name, params, page, limit, userId, ip, userAgent);
     }
 
@@ -47,8 +47,8 @@ export class DynamicQueryController {
         @Req() req: Request,
     ) {
         const userId = (req.user as any)?.userId || (req.user as any)?.id;
-        const ip = req.ip;
-        const userAgent = req.headers['user-agent'];
+        const ip = req.ip || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
         return this.dynamicQueryService.createDynamicQuery(dto, userId, ip, userAgent);
     }
 
@@ -60,8 +60,8 @@ export class DynamicQueryController {
         @Req() req: Request,
     ) {
         const userId = (req.user as any)?.userId || (req.user as any)?.id;
-        const ip = req.ip;
-        const userAgent = req.headers['user-agent'];
+        const ip = req.ip || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
         return this.dynamicQueryService.updateDynamicQuery(id, dto, userId, ip, userAgent);
     }
 
@@ -72,8 +72,8 @@ export class DynamicQueryController {
         @Req() req: Request,
     ) {
         const userId = (req.user as any)?.userId || (req.user as any)?.id;
-        const ip = req.ip;
-        const userAgent = req.headers['user-agent'];
+        const ip = req.ip || 'unknown';
+        const userAgent = req.headers['user-agent'] || 'unknown';
         return this.dynamicQueryService.deleteDynamicQuery(id, userId, ip, userAgent);
     }
 } 
