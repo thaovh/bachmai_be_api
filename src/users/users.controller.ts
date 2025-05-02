@@ -13,11 +13,12 @@ import { UserRole } from './enums/user-role.enum';
 import { PaginationResponseDto } from '../common/dto/pagination-response.dto';
 import { PaginationMetaDto } from '../common/dto/pagination-meta.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
     constructor(
         private readonly commandBus: CommandBus,

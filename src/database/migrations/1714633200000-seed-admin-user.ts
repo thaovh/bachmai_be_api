@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-export class SeedAdminUser1746120000000 implements MigrationInterface {
+export class SeedAdminUser1714633200000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        const hashedPassword = await bcrypt.hash('Admin@123', 10);
+        const hashedPassword = await bcrypt.hash('Password123!', 10);
         
         await queryRunner.query(`
             INSERT INTO tbl_users (
@@ -14,22 +14,22 @@ export class SeedAdminUser1746120000000 implements MigrationInterface {
                 phone_number,
                 identity_number,
                 role,
-                "isActive",
+                is_active,
                 created_at,
                 updated_at,
                 created_by,
                 updated_by
             ) VALUES (
                 uuid_generate_v4(),
-                'admin@example.com',
-                'admin',
+                'fast_api@bachmai.gov.vn',
+                'fast_api',
                 '${hashedPassword}',
-                '0123456789',
-                '123456789012',
+                '1123456789',
+                '223456789012',
                 'ADMIN',
                 true,
-                now(),
-                now(),
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP,
                 'system',
                 'system'
             )
@@ -39,7 +39,7 @@ export class SeedAdminUser1746120000000 implements MigrationInterface {
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`
             DELETE FROM tbl_users 
-            WHERE email = 'admin@example.com'
+            WHERE email = 'fast_api@bachmai.gov.vn'
         `);
     }
 } 

@@ -26,6 +26,6 @@ export class User extends BaseEntity {
     })
     role: UserRole;
 
-    @Column({ default: true })
+    @Column({ name: 'is_active', default: true })
     isActive: boolean;
 } 
