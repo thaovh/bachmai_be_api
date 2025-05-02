@@ -74,13 +74,8 @@ export class DynamicQueryService {
         // Add pagination to SQL query
         const offset = (page - 1) * limit;
         const paginatedSql = `
-            WITH paginated_query AS (
-                ${query.sql}
-            )
-            SELECT * FROM (
-                SELECT a.*, COUNT(*) OVER() as total_count
-                FROM paginated_query a
-            ) b
+            SELECT a.*, COUNT(*) OVER() as total_count
+            FROM (${query.sql}) a
             OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY
         `;
 
